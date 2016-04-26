@@ -118,8 +118,15 @@ public class RestServer
         holderHome.setInitOrder(0);
         context.addServlet(holderHome,"/static/*");
         
+        ServletHolder swaggerServlet = new ServletHolder("swagger", io.swagger.jersey.config.JerseyJaxrsConfig.class);
+        swaggerServlet.setInitParameter("api.version", "1.0.0");
+        swaggerServlet.setInitParameter("swagger.api.basepath", "/");
+        swaggerServlet.setInitParameter("scan.all.resources","true");
+        swaggerServlet.setInitOrder(2);
+        context.addServlet(swaggerServlet,"/swagger/*");
+        
     	ResourceConfig config = new ResourceConfig()
-    			.packages("com.github.anaelcarvalho.simpleurlshortener.services")
+    			.packages("io.swagger.jaxrs.listing","com.github.anaelcarvalho.simpleurlshortener.services")
     			.property(MustacheMvcFeature.TEMPLATE_BASE_PATH, "/templates")
     			.register(org.glassfish.jersey.server.mvc.mustache.MustacheMvcFeature.class)
     			.register(com.github.anaelcarvalho.simpleurlshortener.services.ShortenerService.class)
@@ -127,7 +134,8 @@ public class RestServer
     			.register(jsonConfigResolver);
         ServletHolder jerseyServlet = new ServletHolder("jersey", new org.glassfish.jersey.servlet.ServletContainer(config));
         jerseyServlet.setInitOrder(1);
-        jerseyServlet.setInitParameter("jersey.config.server.provider.packages","com.github.anaelcarvalho.simpleurlshortener.services");
+        jerseyServlet.setInitParameter("jersey.config.server.provider.packages",
+        		"io.swagger.jaxrs.listing,com.github.anaelcarvalho.simpleurlshortener.services");
         context.addServlet(jerseyServlet, "/*");
 
         server.start();

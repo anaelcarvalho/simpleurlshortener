@@ -25,6 +25,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.GenericEntity;
+import javax.ws.rs.core.Link;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
@@ -36,7 +37,15 @@ import com.github.anaelcarvalho.simpleurlshortener.dao.ShortenerDAO;
 import com.github.anaelcarvalho.simpleurlshortener.model.Shortener;
 import com.github.anaelcarvalho.simpleurlshortener.utils.HitcountUpdateTask;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import io.swagger.annotations.ResponseHeader;
+
 @Path("/")
+@Api(value = "URL Shortener API")
 public class ShortenerService {
 	ShortenerDAO shortenerDao;
 	private static final Logger logger = Logger.getLogger(ShortenerService.class.getName());
@@ -44,12 +53,18 @@ public class ShortenerService {
 	@GET
 	@Produces(MediaType.TEXT_HTML)
     @Template(name="/index.mustache")
+	@ApiOperation(hidden = true, value = "")
     public String get() {
         return "";
     }
 	
 	@GET
 	@Path("{shortenedUrl}")
+	@ApiOperation(value = "Get original URL by shortener token and redirect to it",
+			code = 301)
+	@ApiResponses(value = { 
+			@ApiResponse(code = 404, message = "Shortener not found"),
+			@ApiResponse(code = 500, message = "System error") })
     public Response getUrl(@PathParam("shortenedUrl") String shortenedUrl) {
 		try {
 			Shortener shortener = ShortenerDAO.getInstance().getShortenerByShortener(shortenedUrl, true);
@@ -69,6 +84,11 @@ public class ShortenerService {
 	@GET
 	@Path("{shortenedUrl}/info")
 	@Produces(MediaType.APPLICATION_JSON)
+	@ApiOperation(value = "Get detailed shortener information",
+			response = Shortener.class)
+	@ApiResponses(value = { 
+			@ApiResponse(code = 404, message = "Shortener not found"),
+			@ApiResponse(code = 500, message = "System error") })
     public Response getUrlStats(@PathParam("shortenedUrl") String shortenedUrl) {
 		try {
 			Shortener shortener = ShortenerDAO.getInstance().getShortenerByShortener(shortenedUrl, false);
@@ -86,7 +106,17 @@ public class ShortenerService {
 	@GET
 	@Path("list/{pageNumber}")
 	@Produces(MediaType.APPLICATION_JSON)
-    public Response getAllShorteners(@PathParam("pageNumber") Integer pageNumber, @QueryParam("pageSize") Integer pageSize) {
+	@ApiOperation(value = "Get shortener list",
+			response = Shortener.class,
+			responseContainer = "List",
+			responseHeaders = 
+				@ResponseHeader(name = "Links", description = "Contains paging information", response = Link.class))
+	@ApiResponses(value = { 
+			@ApiResponse(code = 404, message = "Shortener not found"),
+			@ApiResponse(code = 500, message = "System error") })
+    public Response getAllShorteners(
+    		@ApiParam(value = "Page number", required = true, defaultValue = "0") @PathParam("pageNumber") Integer pageNumber, 
+    		@ApiParam(value = "Page size", required = false, defaultValue = "30") @QueryParam("pageSize") Integer pageSize) {
 		try {
 			if(pageNumber == null)
 				pageNumber = 0;
@@ -120,7 +150,17 @@ public class ShortenerService {
 	@POST
 	@Path("create")
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response createShortenedUrl(@FormParam("url") String url) {
+	@ApiOperation(value = "Create new shortener",
+			code = 201,
+			responseHeaders = {
+			@ResponseHeader(name = "Location", description = "Link for new shortener", response = URI.class),
+			@ResponseHeader(name = "WWW-Authenticate", description = "Authentication token for managing shortener", response = String.class)})
+	@ApiResponses(value = { 
+			@ApiResponse(code = 400, message = "Invalid URL parameter"),
+			@ApiResponse(code = 409, message = "A shortener already exists for the given URL", 
+					responseHeaders = @ResponseHeader(name = "Location", description = "Link for the shortener", response = URI.class)),
+			@ApiResponse(code = 500, message = "System error") })
+    public Response createShortenedUrl(@ApiParam(value = "URL for shortener creation", required = true) @FormParam("url") String url) {
 		if(url == null || url.isEmpty()) {
 			return Response.status(400).build(); 
 		}
@@ -162,7 +202,14 @@ public class ShortenerService {
 	
 	@DELETE
 	@Path("{url}")
-    public Response deleteShortenedUrl(@PathParam("url") String url, @HeaderParam("Authorization") String authToken) {
+	@ApiOperation(value = "Delete a shortener")
+	@ApiResponses(value = {
+			@ApiResponse(code = 401, message = "Authentication token is required"),
+			@ApiResponse(code = 404, message = "Shortener not found"),
+			@ApiResponse(code = 500, message = "System error") })
+    public Response deleteShortenedUrl(
+    		@ApiParam(value = "Shortener to delete", required = true) @PathParam("url") String url, 
+    		@ApiParam(value = "Authentication token", required = true) @HeaderParam("Authorization") String authToken) {
 		try {
 			if(authToken == null || authToken.isEmpty()) {
 				return Response.status(401).build();
