@@ -59,13 +59,13 @@ public class ShortenerService {
     }
 	
 	@GET
-	@Path("{shortenedUrl}")
+	@Path("{shortener}")
 	@ApiOperation(value = "Get original URL by shortener token and redirect to it",
 			code = 301)
 	@ApiResponses(value = { 
 			@ApiResponse(code = 404, message = "Shortener not found"),
 			@ApiResponse(code = 500, message = "System error") })
-    public Response getUrl(@PathParam("shortenedUrl") String shortenedUrl) {
+    public Response getUrl(@ApiParam(value = "Shortener token", required = true) @PathParam("shortener") String shortenedUrl) {
 		try {
 			Shortener shortener = ShortenerDAO.getInstance().getShortenerByShortener(shortenedUrl, true);
 			if(shortener != null) {
@@ -82,14 +82,14 @@ public class ShortenerService {
     }
 	
 	@GET
-	@Path("{shortenedUrl}/info")
+	@Path("{shortener}/info")
 	@Produces(MediaType.APPLICATION_JSON)
 	@ApiOperation(value = "Get detailed shortener information",
 			response = Shortener.class)
 	@ApiResponses(value = { 
 			@ApiResponse(code = 404, message = "Shortener not found"),
 			@ApiResponse(code = 500, message = "System error") })
-    public Response getUrlStats(@PathParam("shortenedUrl") String shortenedUrl) {
+    public Response getUrlStats(@ApiParam(value = "Shortener token", required = true) @PathParam("shortener") String shortenedUrl) {
 		try {
 			Shortener shortener = ShortenerDAO.getInstance().getShortenerByShortener(shortenedUrl, false);
 			if(shortener != null) {
@@ -110,7 +110,7 @@ public class ShortenerService {
 			response = Shortener.class,
 			responseContainer = "List",
 			responseHeaders = 
-				@ResponseHeader(name = "Links", description = "Contains paging information", response = Link.class))
+				@ResponseHeader(name = "Link", description = "Contains paging information", response = Link.class))
 	@ApiResponses(value = { 
 			@ApiResponse(code = 404, message = "Shortener not found"),
 			@ApiResponse(code = 500, message = "System error") })
@@ -201,14 +201,14 @@ public class ShortenerService {
     }
 	
 	@DELETE
-	@Path("{url}")
+	@Path("{shortener}")
 	@ApiOperation(value = "Delete a shortener")
 	@ApiResponses(value = {
 			@ApiResponse(code = 401, message = "Authentication token is required"),
 			@ApiResponse(code = 404, message = "Shortener not found"),
 			@ApiResponse(code = 500, message = "System error") })
     public Response deleteShortenedUrl(
-    		@ApiParam(value = "Shortener to delete", required = true) @PathParam("url") String url, 
+    		@ApiParam(value = "Shortener to delete", required = true) @PathParam("shortener") String url, 
     		@ApiParam(value = "Authentication token", required = true) @HeaderParam("Authorization") String authToken) {
 		try {
 			if(authToken == null || authToken.isEmpty()) {
